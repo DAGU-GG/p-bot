@@ -18,6 +18,7 @@ from .control_panel import ControlPanel
 from .status_bar import StatusBar
 from .advanced_control_panel import AdvancedControlPanel
 from .enhanced_capture_panel import EnhancedCapturePanel
+from .performance_monitor import PerformanceMonitor
 
 # Import the PokerStarsBot from the src directory
 import sys
@@ -160,6 +161,11 @@ class MainWindow:
         enhanced_capture_frame = tk.Frame(self.advanced_notebook, bg='#2b2b2b')
         self.advanced_notebook.add(enhanced_capture_frame, text="Capture")
         self.enhanced_capture_panel = EnhancedCapturePanel(enhanced_capture_frame, self)
+        
+        # Performance Monitor tab
+        performance_frame = tk.Frame(self.advanced_notebook, bg='#2b2b2b')
+        self.advanced_notebook.add(performance_frame, text="Performance")
+        self.performance_monitor = PerformanceMonitor(performance_frame, self)
         
         # Debug Tools tab
         debug_tools_frame = tk.Frame(self.advanced_notebook, bg='#2b2b2b')
@@ -662,6 +668,9 @@ class MainWindow:
                                 self.log_message("[FIX] Reloading community card regions during capture")
                                 self.bot.community_detector.update_regions(community_regions)
                     
+                    # Record capture time for performance monitoring
+                    capture_start = time.time()
+                    
                     # Save periodic debug images to help diagnose recognition issues
                     if self.capture_count % 20 == 0:  # Save every 20th frame (reduced frequency)
                         import cv2
@@ -674,6 +683,11 @@ class MainWindow:
                     
                     # Only do full analysis if it's time
                     if full_analysis_due:
+                        # Record capture time
+                        capture_time = time.time() - capture_start
+                        if hasattr(self, 'performance_monitor'):
+                            self.performance_monitor.record_capture_time(capture_time)
+                        
                         # Analyze the screenshot with proper error handling
                         try:
                             # Run enhanced analysis with debug mode enabled less frequently
@@ -682,13 +696,40 @@ class MainWindow:
                             # Log that analysis is starting
                             self.log_message(f"Starting analysis of frame #{self.capture_count+1}...")
                             
+                            # Record analysis start time
+                            analysis_start = time.time()
+                            
                             # Perform the analysis
                             analysis = self.bot.analyze_game_state(screenshot, debug=debug_mode)
+                            
+                            # Record analysis time
+                            analysis_time = time.time() - analysis_start
+                            if hasattr(self, 'performance_monitor'):
+                                self.performance_monitor.record_analysis_time(analysis_time)
                             
                             # Validate analysis results
                             if analysis and isinstance(analysis, dict):
                                 # Store last successful analysis
                                 self.last_analysis = analysis
+                                
+                                # Record recognition confidence for performance monitoring
+                                if hasattr(self, 'performance_monitor'):
+                                    confidence = 0.0
+                                    confidence_count = 0
+                                    
+                                    if 'hole_cards' in analysis and analysis['hole_cards']:
+                                        if hasattr(analysis['hole_cards'], 'detection_confidence'):
+                                            confidence += analysis['hole_cards'].detection_confidence
+                                            confidence_count += 1
+                                    
+                                    if 'community_cards' in analysis and analysis['community_cards']:
+                                        if hasattr(analysis['community_cards'], 'detection_confidence'):
+                                            confidence += analysis['community_cards'].detection_confidence
+                                            confidence_count += 1
+                                    
+                                    if confidence_count > 0:
+                                        avg_confidence = confidence / confidence_count
+                                        self.performance_monitor.record_recognition_confidence(avg_confidence)
                                 
                                 # Log successful analysis with detected cards
                                 card_info = ""
