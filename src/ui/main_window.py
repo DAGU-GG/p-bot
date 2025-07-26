@@ -16,6 +16,8 @@ from .table_view_panel import TableViewPanel
 from .game_info_panel import GameInfoPanel
 from .control_panel import ControlPanel
 from .status_bar import StatusBar
+from .advanced_control_panel import AdvancedControlPanel
+from .enhanced_capture_panel import EnhancedCapturePanel
 
 # Import the PokerStarsBot from the src directory
 import sys
@@ -57,8 +59,8 @@ class MainWindow:
         # Create main frame
         self.main_frame = tk.Frame(self.root, bg='#2b2b2b')
         self.main_frame.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
-        self.main_frame.grid_columnconfigure(0, weight=6)  # Give maximum space to table view
-        self.main_frame.grid_columnconfigure(1, weight=1)  # Less space for info panel
+        self.main_frame.grid_columnconfigure(0, weight=5)  # Table view
+        self.main_frame.grid_columnconfigure(1, weight=2)  # Info panel (wider for advanced features)
         self.main_frame.grid_rowconfigure(1, weight=1)
         
         # Bot components
@@ -126,9 +128,173 @@ class MainWindow:
         # Control panel (bottom of table view)
         self.control_panel = ControlPanel(self.table_panel.get_control_frame(), self)
         
+        # Create notebook for advanced features in info panel
+        self.create_advanced_features_notebook()
+        
         # Status bar
         self.status_bar = StatusBar(self.main_frame)
         self.status_bar.grid(row=2, column=0, columnspan=2, sticky="ew", padx=5, pady=5)
+    
+    def create_advanced_features_notebook(self):
+        """Create notebook with advanced features."""
+        # Create notebook in the info panel
+        self.advanced_notebook = ttk.Notebook(self.info_panel)
+        self.advanced_notebook.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Game Info tab (existing content)
+        game_info_frame = tk.Frame(self.advanced_notebook, bg='#2b2b2b')
+        self.advanced_notebook.add(game_info_frame, text="Game Info")
+        
+        # Move existing game info content to the tab
+        for widget in list(self.info_panel.children.values()):
+            if widget != self.advanced_notebook:
+                widget.pack_forget()
+                widget.pack(in_=game_info_frame, fill="both", expand=True)
+        
+        # Advanced Controls tab
+        advanced_controls_frame = tk.Frame(self.advanced_notebook, bg='#2b2b2b')
+        self.advanced_notebook.add(advanced_controls_frame, text="Advanced")
+        self.advanced_control_panel = AdvancedControlPanel(advanced_controls_frame, self)
+        
+        # Enhanced Capture tab
+        enhanced_capture_frame = tk.Frame(self.advanced_notebook, bg='#2b2b2b')
+        self.advanced_notebook.add(enhanced_capture_frame, text="Capture")
+        self.enhanced_capture_panel = EnhancedCapturePanel(enhanced_capture_frame, self)
+        
+        # Debug Tools tab
+        debug_tools_frame = tk.Frame(self.advanced_notebook, bg='#2b2b2b')
+        self.advanced_notebook.add(debug_tools_frame, text="Debug")
+        self.create_debug_tools_tab(debug_tools_frame)
+    
+    def create_debug_tools_tab(self, parent):
+        """Create debug tools tab."""
+        # Debug image viewer
+        debug_frame = tk.LabelFrame(parent, text="Debug Image Viewer", 
+                                   bg='#2b2b2b', fg='white', font=("Arial", 12, "bold"))
+        debug_frame.pack(fill="x", padx=5, pady=5)
+        
+        debug_buttons = tk.Frame(debug_frame, bg='#2b2b2b')
+        debug_buttons.pack(fill="x", padx=5, pady=5)
+        
+        tk.Button(debug_buttons, text="📁 Open Debug Folder", command=self.open_debug_folder,
+                 bg='#2196F3', fg='white', font=("Arial", 9, "bold")).pack(side="left", padx=2)
+        
+        tk.Button(debug_buttons, text="🖼️ View Latest Screenshot", command=self.view_latest_screenshot,
+                 bg='#4CAF50', fg='white', font=("Arial", 9, "bold")).pack(side="left", padx=2)
+        
+        tk.Button(debug_buttons, text="🃏 View Card Debug", command=self.view_card_debug,
+                 bg='#FF9800', fg='white', font=("Arial", 9, "bold")).pack(side="left", padx=2)
+        
+        # Log level control
+        log_frame = tk.LabelFrame(parent, text="Logging Control", 
+                                 bg='#2b2b2b', fg='white', font=("Arial", 12, "bold"))
+        log_frame.pack(fill="x", padx=5, pady=5)
+        
+        log_controls = tk.Frame(log_frame, bg='#2b2b2b')
+        log_controls.pack(fill="x", padx=5, pady=5)
+        
+        tk.Label(log_controls, text="Log Level:", bg='#2b2b2b', fg='white',
+                font=("Arial", 10)).pack(side="left")
+        
+        self.log_level_var = tk.StringVar(value="INFO")
+        log_combo = ttk.Combobox(log_controls, textvariable=self.log_level_var,
+                               values=["DEBUG", "INFO", "WARNING", "ERROR"],
+                               state="readonly", width=10)
+        log_combo.pack(side="left", padx=5)
+        
+        tk.Button(log_controls, text="Apply", command=self.apply_log_level,
+                 bg='#9C27B0', fg='white', font=("Arial", 9, "bold")).pack(side="left", padx=5)
+        
+        tk.Button(log_controls, text="Clear Log", command=self.clear_log,
+                 bg='#f44336', fg='white', font=("Arial", 9, "bold")).pack(side="left", padx=5)
+    
+    def open_debug_folder(self):
+        """Open debug folder in file explorer."""
+        try:
+            import subprocess
+            import platform
+            
+            if platform.system() == "Windows":
+                subprocess.Popen(["explorer", "debug_images"])
+            elif platform.system() == "Darwin":  # macOS
+                subprocess.Popen(["open", "debug_images"])
+            else:  # Linux
+                subprocess.Popen(["xdg-open", "debug_images"])
+                
+        except Exception as e:
+            self.log_message(f"Error opening debug folder: {e}")
+    
+    def view_latest_screenshot(self):
+        """View latest screenshot."""
+        try:
+            import glob
+            
+            screenshots = glob.glob("screenshots/*.png")
+            if screenshots:
+                latest = max(screenshots, key=os.path.getctime)
+                
+                import subprocess
+                import platform
+                
+                if platform.system() == "Windows":
+                    subprocess.Popen(["start", latest], shell=True)
+                elif platform.system() == "Darwin":
+                    subprocess.Popen(["open", latest])
+                else:
+                    subprocess.Popen(["xdg-open", latest])
+            else:
+                messagebox.showinfo("Info", "No screenshots found")
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to view screenshot: {e}")
+    
+    def view_card_debug(self):
+        """View card debug images."""
+        try:
+            import glob
+            
+            debug_images = glob.glob("debug_cards/*.png")
+            if debug_images:
+                latest = max(debug_images, key=os.path.getctime)
+                
+                import subprocess
+                import platform
+                
+                if platform.system() == "Windows":
+                    subprocess.Popen(["start", latest], shell=True)
+                elif platform.system() == "Darwin":
+                    subprocess.Popen(["open", latest])
+                else:
+                    subprocess.Popen(["xdg-open", latest])
+            else:
+                messagebox.showinfo("Info", "No card debug images found")
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to view debug images: {e}")
+    
+    def apply_log_level(self):
+        """Apply log level setting."""
+        try:
+            import logging
+            level = getattr(logging, self.log_level_var.get())
+            logging.getLogger().setLevel(level)
+            self.log_message(f"✅ Log level set to {self.log_level_var.get()}")
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to set log level: {e}")
+    
+    def clear_log(self):
+        """Clear the activity log."""
+        try:
+            # Find the log text widget in the game info panel
+            for widget in self.info_panel.winfo_children():
+                if hasattr(widget, 'log_text'):
+                    widget.log_text.delete(1.0, tk.END)
+                    break
+            self.log_message("Log cleared")
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to clear log: {e}")
     
     def initialize_bot(self):
         """Initialize the bot components."""
