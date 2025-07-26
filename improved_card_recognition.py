@@ -596,7 +596,7 @@ class ImprovedCardRecognizer:
                 confidence = 0.5
                 method = "failed"
             
-            # CRITICAL FIX: If template matching failed, try direct template matching
+            # 5. If template matching failed, try direct template matching
             if card_code in ('empty', 'error', 'unknown') or confidence < 0.3:
                 self.logger.info("Template matching failed or low confidence, trying direct template matching...")
                 try:
@@ -612,7 +612,7 @@ class ImprovedCardRecognizer:
                 except Exception as e:
                     self.logger.error(f"Error in direct template matching: {e}")
             
-            # CRITICAL FIX: If still no card detected, try OCR as final fallback
+            # 6. If still no card detected, try OCR as final fallback
             if card_code in ('empty', 'error', 'unknown') or confidence < 0.3:
                 self.logger.info("Trying OCR as final fallback...")
                 try:
@@ -627,7 +627,7 @@ class ImprovedCardRecognizer:
                 except Exception as e:
                     self.logger.error(f"Error in OCR fallback: {e}")
             
-            # 5. Validate the card code - make sure it's a valid code
+            # 7. Validate the card code - make sure it's a valid code
             if card_code and len(card_code) >= 2:
                 rank, suit = card_code[0], card_code[1]
                 valid_ranks = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A']
@@ -637,12 +637,12 @@ class ImprovedCardRecognizer:
                     self.logger.warning(f"Invalid card code detected: {card_code}, treating as empty")
                     return ('empty', 0.9, 'validation_failed')
             
-            # 6. Lower the confidence threshold to be more permissive
+            # 8. Lower the confidence threshold to be more permissive
             if confidence < 0.3 and empty_confidence > 0.8:
                 self.logger.info(f"Overriding very low confidence card ({card_code}, {confidence:.2f}) with empty slot detection")
                 return ('empty', empty_confidence, 'low_confidence_override')
             
-            # 7. Return the result in tuple format
+            # 9. Return the result in tuple format
             return (card_code, confidence, method)
             
         except Exception as e:
