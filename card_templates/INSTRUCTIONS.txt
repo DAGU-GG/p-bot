@@ -1,0 +1,79 @@
+
+Card Template Collection Instructions:
+=====================================
+
+To enable card recognition, you need to collect card templates from PokerStars.
+
+1. Start PokerStars and join a play-money table
+2. Wait for cards to be dealt to you
+3. Take screenshots when you have different cards
+4. Use image editing software to crop individual cards
+5. Save them in the card_templates/ folder with these names:
+
+Format: [rank][suit].png
+Examples: Ah.png (Ace of Hearts), Ts.png (Ten of Spades)
+
+Ranks: 2, 3, 4, 5, 6, 7, 8, 9, T, J, Q, K, A
+Suits: h (hearts), d (diamonds), c (clubs), s (spades)
+
+Required files (52 total):
+- 2h.png
+- 2d.png
+- 2c.png
+- 2s.png
+- 3h.png
+- 3d.png
+- 3c.png
+- 3s.png
+- 4h.png
+- 4d.png
+- 4c.png
+- 4s.png
+- 5h.png
+- 5d.png
+- 5c.png
+- 5s.png
+- 6h.png
+- 6d.png
+- 6c.png
+- 6s.png
+- 7h.png
+- 7d.png
+- 7c.png
+- 7s.png
+- 8h.png
+- 8d.png
+- 8c.png
+- 8s.png
+- 9h.png
+- 9d.png
+- 9c.png
+- 9s.png
+- Th.png
+- Td.png
+- Tc.png
+- Ts.png
+- Jh.png
+- Jd.png
+- Jc.png
+- Js.png
+- Qh.png
+- Qd.png
+- Qc.png
+- Qs.png
+- Kh.png
+- Kd.png
+- Kc.png
+- Ks.png
+- Ah.png
+- Ad.png
+- Ac.png
+- As.png
+
+Tips:
+- Crop cards to show just the card face (no background)
+- Keep consistent sizing (recommended: 60x80 pixels)
+- Use PNG format for transparency support
+- Ensure good contrast and clarity
+
+Once templates are collected, restart the bot to load them.
