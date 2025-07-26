@@ -217,6 +217,27 @@ class MainWindow:
                     self.table_panel.custom_regions = all_regions
                     self.table_panel.show_debug_overlay.set(True)
                     self.log_message("[SUCCESS] Regions will be displayed on the livestream")
+                    
+                    # CRITICAL FIX: Force immediate region display
+                    converted_regions = {}
+                    for region_name, region_data in all_regions.items():
+                        color = 'lime'
+                        if 'community' in region_name:
+                            color = 'lime' 
+                        elif 'hero' in region_name:
+                            color = 'cyan'
+                        else:
+                            color = 'yellow'
+                        
+                        converted_regions[region_name] = {
+                            'x': region_data['x'],
+                            'y': region_data['y'],
+                            'width': region_data['width'],
+                            'height': region_data['height'],
+                            'color': color
+                        }
+                    self.table_panel.custom_regions = converted_regions
+                    self.log_message("[SUCCESS] Regions configured for immediate display")
             else:
                 self.log_message(f"[WARNING] No saved regions found at path: {self.config_path}")
                 

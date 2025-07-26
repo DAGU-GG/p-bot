@@ -431,11 +431,13 @@ Once templates are collected, restart the bot to load them.
         """Enhanced card recognition with multiple scale testing, color verification and confidence boosting."""
         try:
             if not self.template_loaded or card_img is None or card_img.size == 0:
+                self.logger.warning("Template matching failed: templates not loaded or invalid image")
                 return None
             
             # Preprocess the card image with multiple variants
             processed = self.preprocess_card_image(card_img)
             if 'top_focused' not in processed:
+                self.logger.warning("Template matching failed: preprocessing failed")
                 return None
             
             # Get multiple image variants for better matching
@@ -458,7 +460,7 @@ Once templates are collected, restart the bot to load them.
                 self.debug_template_results = []
             
             # Try multiple scale factors for better matching across resolutions
-            scale_factors = [0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15]
+            scale_factors = [0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2]
             
             # Try multiple template matching methods
             matching_methods = [
@@ -492,6 +494,7 @@ Once templates are collected, restart the bot to load them.
             
             # Track all potential matches for weighted consensus
             all_matches = {}
+            total_comparisons = 0
             
             for card_name, template in self.card_templates.items():
                 # Skip if template doesn't exist
@@ -532,6 +535,7 @@ Once templates are collected, restart the bot to load them.
                     
                         for method, method_weight, invert_score in matching_methods:
                             try:
+                                total_comparisons += 1
                                 # Resize template to match target if needed
                                 if template.shape[0] != scaled_img.shape[0] or template.shape[1] != scaled_img.shape[1]:
                                     template_resized = cv2.resize(template, 
@@ -563,8 +567,8 @@ Once templates are collected, restart the bot to load them.
                                 else:
                                     final_score *= 0.5  # Severely penalize wrong suit colors
                                 
-                                # Only consider reasonable matches
-                                if final_score > 0.6:
+                                # Lower threshold to be more permissive
+                                if final_score > 0.4:
                                     card_score += final_score
                                     match_count += 1
                                     
@@ -598,6 +602,8 @@ Once templates are collected, restart the bot to load them.
                     # Store for debug output
                     if debug and template is not None:
                         self.debug_template_results.append((card_name, avg_score, template))
+            
+            self.logger.info(f"Template matching completed: {total_comparisons} comparisons, {len(all_matches)} potential matches")
             
             # If we have debug information, sort by score
             if debug and hasattr(self, 'debug_template_results'):
@@ -640,11 +646,13 @@ Once templates are collected, restart the bot to load them.
                             self.logger.debug(f"Override to consensus rank {best_rank}: {card_name} with score {score:.3f}")
                             break
             
-            if best_match and best_confidence > 0.6:  # Lower threshold from 0.7 to 0.6
+            if best_match and best_confidence > 0.4:  # Even lower threshold for better detection
                 self.logger.debug(f"Final template match: {best_match.rank}{best_match.suit} (confidence: {best_confidence:.3f})")
                 return best_match
             else:
                 self.logger.debug(f"No confident template match found. Best score: {best_confidence:.3f}")
+                if best_match:
+                    self.logger.debug(f"Best match was: {best_match.rank}{best_match.suit} but confidence too low")
                 return None
             
         except Exception as e:
