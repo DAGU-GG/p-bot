@@ -8,9 +8,17 @@ from tkinter import ttk
 import time
 import threading
 from collections import deque
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
+
+# Optional matplotlib import
+try:
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+    MATPLOTLIB_AVAILABLE = True
+except ImportError:
+    MATPLOTLIB_AVAILABLE = False
+    plt = None
+    FigureCanvasTkAgg = None
 
 
 class PerformanceMonitor:
@@ -34,7 +42,10 @@ class PerformanceMonitor:
         # Create performance monitoring UI
         self.create_performance_display()
         self.create_performance_controls()
-        self.create_performance_charts()
+        if MATPLOTLIB_AVAILABLE:
+            self.create_performance_charts()
+        else:
+            self.create_simple_charts()
     
     def create_performance_display(self):
         """Create performance metrics display."""
@@ -114,6 +125,9 @@ class PerformanceMonitor:
     
     def create_performance_charts(self):
         """Create performance visualization charts."""
+        if not MATPLOTLIB_AVAILABLE:
+            return
+            
         charts_frame = tk.LabelFrame(self.parent, text="Performance Charts", 
                                    bg='#2b2b2b', fg='white', font=("Arial", 12, "bold"))
         charts_frame.pack(fill="both", expand=True, padx=5, pady=5)
@@ -151,6 +165,23 @@ class PerformanceMonitor:
         self.ax2.legend()
         
         plt.tight_layout()
+    
+    def create_simple_charts(self):
+        """Create simple text-based charts when matplotlib is not available."""
+        charts_frame = tk.LabelFrame(self.parent, text="Performance Data", 
+                                   bg='#2b2b2b', fg='white', font=("Arial", 12, "bold"))
+        charts_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Simple text display
+        self.simple_chart_text = tk.Text(charts_frame, bg='#1e1e1e', fg='white',
+                                        font=("Consolas", 10), height=15)
+        self.simple_chart_text.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Add note about matplotlib
+        note_label = tk.Label(charts_frame, 
+                             text="Install matplotlib for advanced charts: pip install matplotlib",
+                             bg='#2b2b2b', fg='yellow', font=("Arial", 9))
+        note_label.pack(pady=2)
     
     def start_monitoring(self):
         """Start performance monitoring."""
@@ -230,6 +261,10 @@ class PerformanceMonitor:
     
     def update_charts(self):
         """Update performance charts."""
+        if not MATPLOTLIB_AVAILABLE:
+            self.update_simple_charts()
+            return
+            
         try:
             if len(self.timestamps) < 2:
                 return
@@ -262,6 +297,48 @@ class PerformanceMonitor:
             
         except Exception as e:
             self.main_window.log_message(f"Error updating charts: {e}")
+    
+    def update_simple_charts(self):
+        """Update simple text-based charts."""
+        try:
+            if len(self.timestamps) < 2:
+                return
+            
+            # Clear and update text display
+            self.simple_chart_text.delete(1.0, tk.END)
+            
+            # Add recent performance data
+            self.simple_chart_text.insert(tk.END, "Recent Performance Data:\n")
+            self.simple_chart_text.insert(tk.END, "=" * 30 + "\n\n")
+            
+            # Show last 10 capture times
+            if self.capture_times:
+                recent_captures = list(self.capture_times)[-10:]
+                self.simple_chart_text.insert(tk.END, "Capture Times (ms):\n")
+                for i, time_val in enumerate(recent_captures):
+                    self.simple_chart_text.insert(tk.END, f"  {i+1:2d}: {time_val*1000:.1f}ms\n")
+                self.simple_chart_text.insert(tk.END, "\n")
+            
+            # Show last 10 analysis times
+            if self.analysis_times:
+                recent_analysis = list(self.analysis_times)[-10:]
+                self.simple_chart_text.insert(tk.END, "Analysis Times (ms):\n")
+                for i, time_val in enumerate(recent_analysis):
+                    self.simple_chart_text.insert(tk.END, f"  {i+1:2d}: {time_val*1000:.1f}ms\n")
+                self.simple_chart_text.insert(tk.END, "\n")
+            
+            # Show last 10 confidence values
+            if self.recognition_confidence:
+                recent_confidence = list(self.recognition_confidence)[-10:]
+                self.simple_chart_text.insert(tk.END, "Recognition Confidence:\n")
+                for i, conf_val in enumerate(recent_confidence):
+                    self.simple_chart_text.insert(tk.END, f"  {i+1:2d}: {conf_val:.3f}\n")
+            
+            # Auto-scroll to bottom
+            self.simple_chart_text.see(tk.END)
+            
+        except Exception as e:
+            self.main_window.log_message(f"Error updating simple charts: {e}")
     
     def record_capture_time(self, capture_time: float):
         """Record a capture time measurement."""
