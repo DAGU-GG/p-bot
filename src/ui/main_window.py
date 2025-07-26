@@ -18,7 +18,14 @@ from .control_panel import ControlPanel
 from .status_bar import StatusBar
 from .advanced_control_panel import AdvancedControlPanel
 from .enhanced_capture_panel import EnhancedCapturePanel
-from .performance_monitor import PerformanceMonitor
+
+# Optional performance monitor import
+try:
+    from .performance_monitor import PerformanceMonitor
+    PERFORMANCE_MONITOR_AVAILABLE = True
+except ImportError:
+    PERFORMANCE_MONITOR_AVAILABLE = False
+    PerformanceMonitor = None
 
 # Import the PokerStarsBot from the src directory
 import sys
@@ -194,9 +201,10 @@ class MainWindow:
         self.enhanced_capture_panel = EnhancedCapturePanel(enhanced_capture_frame, self)
         
         # Performance Monitor tab
-        performance_frame = tk.Frame(self.advanced_notebook, bg='#2b2b2b')
-        self.advanced_notebook.add(performance_frame, text="Performance")
-        self.performance_monitor = PerformanceMonitor(performance_frame, self)
+        if PERFORMANCE_MONITOR_AVAILABLE:
+            performance_frame = tk.Frame(self.advanced_notebook, bg='#2b2b2b')
+            self.advanced_notebook.add(performance_frame, text="Performance")
+            self.performance_monitor = PerformanceMonitor(performance_frame, self)
         
         # Debug Tools tab
         debug_tools_frame = tk.Frame(self.advanced_notebook, bg='#2b2b2b')
@@ -716,7 +724,7 @@ class MainWindow:
                     if full_analysis_due:
                         # Record capture time
                         capture_time = time.time() - capture_start
-                        if hasattr(self, 'performance_monitor'):
+                        if PERFORMANCE_MONITOR_AVAILABLE and hasattr(self, 'performance_monitor'):
                             self.performance_monitor.record_capture_time(capture_time)
                         
                         # Analyze the screenshot with proper error handling
@@ -735,7 +743,7 @@ class MainWindow:
                             
                             # Record analysis time
                             analysis_time = time.time() - analysis_start
-                            if hasattr(self, 'performance_monitor'):
+                            if PERFORMANCE_MONITOR_AVAILABLE and hasattr(self, 'performance_monitor'):
                                 self.performance_monitor.record_analysis_time(analysis_time)
                             
                             # Validate analysis results
@@ -744,7 +752,7 @@ class MainWindow:
                                 self.last_analysis = analysis
                                 
                                 # Record recognition confidence for performance monitoring
-                                if hasattr(self, 'performance_monitor'):
+                                if PERFORMANCE_MONITOR_AVAILABLE and hasattr(self, 'performance_monitor'):
                                     confidence = 0.0
                                     confidence_count = 0
                                     
