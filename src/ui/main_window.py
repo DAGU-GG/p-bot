@@ -24,6 +24,34 @@ from .performance_monitor import PerformanceMonitor
 import sys
 import os
 # Add the src directory to the path
+# Import enhanced recognition systems
+try:
+    from improved_card_recognition import ImprovedCardRecognizer
+    IMPROVED_RECOGNITION_AVAILABLE = True
+except ImportError:
+    IMPROVED_RECOGNITION_AVAILABLE = False
+    print("Warning: Improved card recognition not available")
+
+try:
+    from enhanced_card_recognition import EnhancedCardRecognizer
+    ENHANCED_RECOGNITION_AVAILABLE = True
+except ImportError:
+    ENHANCED_RECOGNITION_AVAILABLE = False
+    print("Warning: Enhanced card recognition not available")
+
+try:
+    from comprehensive_card_recognition import ComprehensiveCardRecognizer
+    COMPREHENSIVE_RECOGNITION_AVAILABLE = True
+except ImportError:
+    COMPREHENSIVE_RECOGNITION_AVAILABLE = False
+    print("Warning: Comprehensive card recognition not available")
+
+try:
+    from direct_card_recognition import DirectCardRecognizer
+    DIRECT_RECOGNITION_AVAILABLE = True
+except ImportError:
+    DIRECT_RECOGNITION_AVAILABLE = False
+    print("Warning: Direct card recognition not available")
 src_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if src_path not in sys.path:
     sys.path.insert(0, src_path)
@@ -38,6 +66,9 @@ class MainWindow:
     
     def __init__(self, recognition_system='standard', show_regions=False, config_path='region_config.json'):
         """Initialize the main window and all components."""
+        # Print enhanced startup information
+        self.print_startup_banner(recognition_system)
+        
         # Store initialization parameters
         self.recognition_system = recognition_system
         self.show_regions = show_regions
