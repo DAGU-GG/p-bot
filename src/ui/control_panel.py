@@ -4,6 +4,7 @@ Handles bot controls, capture mode selection, and OBS integration.
 """
 
 import tkinter as tk
+from tkinter import ttk
 
 
 class ControlPanel:
@@ -54,6 +55,15 @@ class ControlPanel:
         )
         self.obs_connect_btn.pack(side="left", padx=2)
         
+        # Manual capture button for hardware capture
+        self.manual_capture_btn = tk.Button(
+            self.obs_controls, text="📸 Manual Capture", width=15,
+            command=self.main_window.manual_capture,
+            bg='#4CAF50', fg='white', font=("Arial", 9, "bold"),
+            state="disabled"
+        )
+        self.manual_capture_btn.pack(side="left", padx=2)
+        
         self.obs_status = tk.Label(self.obs_controls, text="Not Connected",
                                   bg='#2b2b2b', fg='lightgray')
         self.obs_status.pack(side="left", padx=5)
@@ -73,15 +83,12 @@ class ControlPanel:
         )
         self.find_button.pack(side="left", padx=5)
         
-        self.start_button = tk.Button(
-            button_frame, text="▶ Start Bot", 
-            command=self.main_window.start_bot, width=15,
-            bg='#2196F3', fg='white', font=("Arial", 10, "bold")
-        )
+        # Start/Stop controls
+        self.start_button = ttk.Button(button_frame, text="🚀 Start Analysis", command=self.toggle_bot, style="Accent.TButton")
         self.start_button.pack(side="left", padx=5)
         
         self.stop_button = tk.Button(
-            button_frame, text="⏹ Stop Bot", 
+            button_frame, text="⏹ Stop Analysis", 
             command=self.main_window.stop_bot, width=15, state="disabled",
             bg='#f44336', fg='white', font=("Arial", 10, "bold")
         )
@@ -101,6 +108,14 @@ class ControlPanel:
             bg='#9C27B0', fg='white', font=("Arial", 10, "bold")
         )
         self.refresh_regions_button.pack(side="left", padx=5)
+    
+    def toggle_bot(self):
+        """Toggle bot start/stop."""
+        # Delegate to main window
+        if hasattr(self.main_window, 'start_bot'):
+            self.main_window.start_bot()
+        else:
+            print("Start bot functionality not implemented")
     
     def on_mode_change(self):
         """Handle capture mode change."""
@@ -125,13 +140,41 @@ class ControlPanel:
         """Update OBS connection status."""
         if connected:
             self.obs_status.configure(text="Connected", fg="green")
-            self.obs_connect_btn.configure(text="Disconnect")
-            self.obs_connect_btn.configure(command=self.main_window.disconnect_obs_camera)
+            self.obs_connect_btn.configure(text="Disconnect", bg='#f44336')
+            if hasattr(self, 'manual_capture_btn'):
+                self.manual_capture_btn.configure(state="normal")
         else:
             self.obs_status.configure(text="Not Connected", fg="lightgray")
-            self.obs_connect_btn.configure(text="Connect OBS")
-            self.obs_connect_btn.configure(command=self.main_window.connect_obs_camera)
+            self.obs_connect_btn.configure(text="Connect OBS", bg='#9C27B0')
+            if hasattr(self, 'manual_capture_btn'):
+                self.manual_capture_btn.configure(state="disabled")
     
     def set_obs_status(self, status):
         """Set OBS status text."""
         self.obs_status.configure(text=status)
+    
+    def on_mode_change(self):
+        """Handle capture mode change."""
+        mode = self.mode_var.get()
+        if mode == "obs":
+            self.obs_controls.pack(side="right", padx=5)
+            self.main_window.set_capture_mode("obs")
+        else:
+            self.obs_controls.pack_forget()
+            self.main_window.set_capture_mode("window")
+    
+    def toggle_bot(self):
+        """Toggle bot start/stop."""
+        if not self.main_window.running:
+            self.main_window.start_bot()
+        else:
+            self.main_window.stop_bot()
+    
+    def update_button_states(self, running):
+        """Update button states based on bot running state."""
+        if running:
+            self.start_button.configure(text="⏸ Pause Analysis")
+            self.stop_button.configure(state="normal")
+        else:
+            self.start_button.configure(text="🚀 Start Analysis")
+            self.stop_button.configure(state="disabled")

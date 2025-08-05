@@ -15,9 +15,12 @@ from PIL import Image
 # Optional pytesseract import
 try:
     import pytesseract
-    # Configure Tesseract path for Windows
-    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-    PYTESSERACT_AVAILABLE = True
+    # Configure Tesseract using centralized config
+    import sys
+    import os
+    sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+    from tesseract_config import configure_tesseract
+    PYTESSERACT_AVAILABLE = configure_tesseract()
 except ImportError:
     PYTESSERACT_AVAILABLE = False
     print("Warning: pytesseract not available, OCR functionality may be limited")

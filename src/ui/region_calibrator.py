@@ -70,8 +70,15 @@ class RegionCalibrator:
             # Check capture mode from main window
             capture_mode = getattr(self.main_window, 'capture_mode', 'window')
             
+            # Check capture mode from main window
+            capture_mode = getattr(self.main_window, 'capture_mode', 'window')
+            
             if capture_mode == "obs":
-                if hasattr(self.main_window, 'obs_capture') and self.main_window.obs_capture:
+                # Check for hardware capture system (new)
+                if hasattr(self.main_window, 'hardware_capture') and self.main_window.hardware_capture:
+                    screenshot = self.main_window.hardware_capture.capture_from_virtual_camera()
+                # Check for old obs_capture system (fallback)
+                elif hasattr(self.main_window, 'obs_capture') and self.main_window.obs_capture:
                     screenshot = self.main_window.obs_capture.capture_single_frame()
                 else:
                     messagebox.showerror("Error", "OBS capture not available. Please ensure OBS Virtual Camera is running.")
@@ -562,17 +569,41 @@ class RegionCalibrator:
                         config_data = json.load(f)
                     
                     if 'regions' in config_data:
-                        # Merge with default colors
+                        # Merge with default colors and ensure all fields exist
                         for name, data in config_data['regions'].items():
                             if name in self.regions:
+                                # Update existing region data
                                 self.regions[name].update(data)
+                                # Ensure color field exists
+                                if 'color' not in self.regions[name]:
+                                    if 'community' in name:
+                                        self.regions[name]['color'] = 'lime'
+                                    elif 'hero' in name:
+                                        self.regions[name]['color'] = 'cyan'
+                                    else:
+                                        self.regions[name]['color'] = 'yellow'
+                            else:
+                                # Add new region with default color
+                                self.regions[name] = data.copy()
+                                if 'color' not in self.regions[name]:
+                                    if 'community' in name:
+                                        self.regions[name]['color'] = 'lime'
+                                    elif 'hero' in name:
+                                        self.regions[name]['color'] = 'cyan'
+                                    else:
+                                        self.regions[name]['color'] = 'yellow'
                     
-                    self.main_window.log_message(f"Loaded region config from {config_path}")
-                    break
+                    self.main_window.log_message(f"SUCCESS: Loaded region config from {config_path}")
+                    self.update_canvas()  # Refresh the display
+                    return
+            
+            self.main_window.log_message("WARNING: No region config file found, using defaults")
                 
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):
-                self.main_window.log_message(f"Could not load region config: {e}")
+                self.main_window.log_message(f"ERROR loading region config: {e}")
+                import traceback
+                self.main_window.log_message(f"Traceback: {traceback.format_exc()}")
     
     def load_regions_dialog(self):
         """Open a file dialog to load regions from a JSON file."""
@@ -590,7 +621,7 @@ class RegionCalibrator:
             
             if 'regions' in data:
                 self.regions = data['regions']
-                self.update_regions_display()
+                self.update_canvas()
                 self.main_window.log_message(f"Loaded regions from {filepath}")
             else:
                 messagebox.showerror("Error", "Invalid region file format")
@@ -616,11 +647,43 @@ class RegionCalibrator:
             return
         
         try:
-            # Apply current regions to bot components
-            self.apply_regions_to_bot()
+            # Check if bot or hardware capture is available
+            bot_available = hasattr(self.main_window, 'bot') and self.main_window.bot
+            hardware_available = hasattr(self.main_window, 'hardware_capture') and self.main_window.hardware_capture
             
-            # Test recognition
-            if hasattr(self.main_window, 'bot') and self.main_window.bot:
+            if not bot_available and not hardware_available:
+                messagebox.showerror("Error", "No capture system initialized. Please connect to OBS or PokerStars first.")
+                return
+            
+            # Test recognition using available system
+            if hardware_available:
+                # Use hardware capture system
+                results = []
+                for region_name, region_rect in self.region_rectangles.items():
+                    if region_rect and 'card' in region_name.lower():
+                        # Extract region from current image
+                        x, y, w, h = region_rect[:4]
+                        if x + w <= self.current_image.shape[1] and y + h <= self.current_image.shape[0]:
+                            card_region = self.current_image[y:y+h, x:x+w]
+                            result = self.main_window.hardware_capture.recognize_card_from_region(card_region, region_name)
+                            if result:
+                                results.append(f"{region_name}: {result['rank']}{result['suit']} ({result['method']}, {result['confidence']:.2f})")
+                            else:
+                                results.append(f"{region_name}: No card detected")
+                
+                result_text = "Hardware Capture Recognition Test:\n\n"
+                if results:
+                    result_text += "\n".join(results)
+                else:
+                    result_text += "No card regions found or no cards detected"
+                
+                messagebox.showinfo("Recognition Test Results", result_text)
+                
+            elif bot_available:
+                # Apply current regions to bot components first
+                self.apply_regions_to_bot()
+                
+                # Use legacy bot system
                 analysis = self.main_window.bot.analyze_game_state(self.current_image)
                 
                 # Show results
@@ -642,8 +705,6 @@ class RegionCalibrator:
                     result_text += f"Pot Size: {table_info.pot_size:.1f}BB\n"
                 
                 messagebox.showinfo("Recognition Test Results", result_text)
-            else:
-                messagebox.showerror("Error", "Bot not initialized")
                 
         except Exception as e:
             messagebox.showerror("Error", f"Recognition test failed: {e}")
@@ -765,23 +826,37 @@ class RegionCalibrator:
     def apply_and_close(self):
         """Apply current regions and close calibrator."""
         try:
-            # Save regions
+            self.main_window.log_message("Applying new regions...")
+            
+            # Save regions first
             self.save_regions()
+            self.main_window.log_message("SUCCESS: Regions saved to file")
             
-            # Apply to bot
+            # Apply to bot (non-blocking)
             self.apply_regions_to_bot()
+            self.main_window.log_message("SUCCESS: Regions applied to bot")
             
-            # CRITICAL FIX: Force a complete region refresh in the main window
-            if hasattr(self.main_window, 'refresh_regions'):
-                self.main_window.refresh_regions()
-                self.main_window.log_message("[SUCCESS] Forced main window region refresh after calibration")
+            # Force region refresh in main window (non-blocking)
+            def delayed_refresh():
+                try:
+                    if hasattr(self.main_window, 'refresh_regions'):
+                        self.main_window.refresh_regions()
+                        self.main_window.log_message("SUCCESS: Main window regions refreshed")
+                    
+                    # Clear cached analysis
+                    if hasattr(self.main_window, 'last_analysis'):
+                        self.main_window.last_analysis = None
+                        
+                    self.main_window.log_message("SUCCESS: Region update complete - next capture will use new regions")
+                except Exception as e:
+                    self.main_window.log_message(f"Warning during refresh: {e}")
             
-            # CRITICAL FIX: Clear last analysis to ensure next frame is processed with new regions
-            if hasattr(self.main_window, 'last_analysis'):
-                self.main_window.last_analysis = None
+            # Schedule the refresh to run after a brief delay to avoid freezing
+            self.main_window.root.after(100, delayed_refresh)
             
-            # Close calibrator
+            # Close calibrator immediately
             self.close_calibrator()
+            self.main_window.log_message("Region calibrator closed successfully")
             
         except Exception as e:
             self.main_window.log_message(f"Error saving and applying regions: {e}")

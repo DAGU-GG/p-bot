@@ -250,8 +250,11 @@ class TableViewPanel(tk.Frame):
                 
                 if converted_regions:
                     self.custom_regions = converted_regions
+                    # CRITICAL FIX: Force the overlay to show immediately
+                    self.show_debug_overlay.set(True)
                     if hasattr(self.main_window, 'log_message'):
                         self.main_window.log_message(f"Successfully loaded {len(converted_regions)} saved regions for overlay")
+                        self.main_window.log_message("Regions will be visible on next screenshot")
                         
         except Exception as e:
             if hasattr(self.main_window, 'log_message'):

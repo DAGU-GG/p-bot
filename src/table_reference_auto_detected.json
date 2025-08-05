@@ -1,0 +1,85 @@
+{
+  "table_size": [
+    1920,
+    1080
+  ],
+  "elements": [
+    {
+      "name": "player_card_0",
+      "bbox": [
+        998,
+        714,
+        77,
+        100
+      ],
+      "element_type": "card",
+      "confidence": 0.8,
+      "ocr_text": ""
+    },
+    {
+      "name": "stack_seat_2",
+      "bbox": [
+        288,
+        939,
+        307,
+        54
+      ],
+      "element_type": "stack",
+      "confidence": 0.7,
+      "ocr_text": "25727"
+    },
+    {
+      "name": "stack_seat_5",
+      "bbox": [
+        806,
+        291,
+        307,
+        54
+      ],
+      "element_type": "stack",
+      "confidence": 0.7,
+      "ocr_text": "15BB"
+    },
+    {
+      "name": "stack_seat_9",
+      "bbox": [
+        806,
+        777,
+        307,
+        54
+      ],
+      "element_type": "stack",
+      "confidence": 0.7,
+      "ocr_text": "206B .4"
+    }
+  ],
+  "action_buttons": {
+    "fold": {
+      "bbox": [
+        1056,
+        972,
+        153,
+        54
+      ],
+      "visible": false
+    },
+    "call": {
+      "bbox": [
+        1228,
+        972,
+        153,
+        54
+      ],
+      "visible": false
+    },
+    "raise": {
+      "bbox": [
+        1401,
+        972,
+        153,
+        54
+      ],
+      "visible": false
+    }
+  }
+}

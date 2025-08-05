@@ -21,7 +21,7 @@ class RegionLoader:
                          If not provided, defaults to 'regions/region_config.json'
         """
         self.logger = logging.getLogger(__name__)
-        self.regions_file = config_file if config_file else 'regions/region_config.json'
+        self.regions_file = config_file if config_file else 'region_config.json'
         # REMOVED: No more default regions - only use saved regions
         
     def load_regions(self) -> Dict[str, Dict]:
@@ -59,7 +59,8 @@ class RegionLoader:
             self.logger.error(f"Could not load saved regions: {e}")
         
         # NO FALLBACK - If regions don't exist, the system should fail gracefully
-        self.logger.error("❌ NO SAVED REGIONS FOUND - Please calibrate regions first!")
+        if not os.path.exists(self.config_file):
+            self.logger.error("NO SAVED REGIONS FOUND - Please calibrate regions first!")
         return {}
     
     def get_community_card_regions(self) -> Dict[str, Dict]:

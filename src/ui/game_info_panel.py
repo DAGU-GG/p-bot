@@ -172,6 +172,96 @@ class GameInfoPanel(tk.Frame):
         self.log_text = tk.Text(log_frame, height=8, bg='#1e1e1e', fg='white',
                                font=("Consolas", 9))
         self.log_text.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # Live Recognition Status section
+        self.create_live_recognition_section()
+    
+    def create_live_recognition_section(self):
+        """Create live recognition status section"""
+        live_frame = tk.Frame(self, bg='#2b2b2b')
+        live_frame.pack(fill="x", padx=10, pady=10)
+        
+        live_title = tk.Label(
+            live_frame, 
+            text="🎯 Live Recognition Status", 
+            font=("Arial", 14, "bold"),
+            bg='#2b2b2b', fg='white'
+        )
+        live_title.pack(pady=10)
+        
+        # Recognition method display
+        self.recognition_method_label = tk.Label(
+            live_frame,
+            text="Recognition Method: Not Connected",
+            font=("Arial", 10),
+            bg='#2b2b2b', fg='lightgray'
+        )
+        self.recognition_method_label.pack(pady=2)
+        
+        # Processing performance
+        self.processing_performance_label = tk.Label(
+            live_frame,
+            text="Processing: No data",
+            font=("Arial", 10),
+            bg='#2b2b2b', fg='lightgray'
+        )
+        self.processing_performance_label.pack(pady=2)
+        
+        # Last recognition results in a compact format
+        recognition_results_frame = tk.Frame(live_frame, bg='#444444')
+        recognition_results_frame.pack(fill="x", padx=10, pady=5)
+        
+        tk.Label(recognition_results_frame, text="Last Recognition:", 
+                font=("Arial", 10, "bold"), bg='#444444', fg='white').pack(side="left", padx=5)
+        
+        self.last_recognition_label = tk.Label(
+            recognition_results_frame,
+            text="No recent recognition",
+            font=("Arial", 9),
+            bg='#444444', fg='lightgreen'
+        )
+        self.last_recognition_label.pack(side="left", padx=5)
+    
+    def update_live_recognition_status(self, recognition_data):
+        """Update the live recognition status display"""
+        try:
+            if not recognition_data:
+                return
+            
+            # Update recognition method
+            method = recognition_data.get('recognition_method', 'Unknown')
+            self.recognition_method_label.configure(text=f"Recognition Method: {method}")
+            
+            # Update processing performance
+            processing_time = recognition_data.get('processing_time', 0)
+            confidence = recognition_data.get('analysis_confidence', 0)
+            performance_text = f"Processing: {processing_time*1000:.1f}ms | Confidence: {confidence:.3f}"
+            self.processing_performance_label.configure(text=performance_text)
+            
+            # Update last recognition summary
+            hero_cards = recognition_data.get('hero_cards', [])
+            community_cards = recognition_data.get('community_cards', [])
+            
+            if hero_cards or community_cards:
+                hero_summary = f"{len(hero_cards)} hero" if hero_cards else "0 hero"
+                community_summary = f"{len(community_cards)} community" if community_cards else "0 community"
+                last_recognition_text = f"{hero_summary}, {community_summary} cards detected"
+                
+                # Add individual card details if available
+                if len(hero_cards) > 0:
+                    hero_cards_text = ", ".join([card.get('card', '?') for card in hero_cards[:2]])
+                    last_recognition_text += f" | Hero: {hero_cards_text}"
+                
+                if len(community_cards) > 0:
+                    community_cards_text = ", ".join([card.get('card', '?') for card in community_cards[:5]])
+                    last_recognition_text += f" | Community: {community_cards_text}"
+                
+                self.last_recognition_label.configure(text=last_recognition_text, fg='lightgreen')
+            else:
+                self.last_recognition_label.configure(text="No cards detected in last recognition", fg='orange')
+                
+        except Exception as e:
+            self.last_recognition_label.configure(text=f"Recognition status error: {e}", fg='red')
     
     def set_window_info(self, info):
         """Update window information."""

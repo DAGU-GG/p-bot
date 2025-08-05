@@ -15,7 +15,7 @@ from ui.main_window import MainWindow
 
 def parse_arguments():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description='Modern PokerStars Bot UI')
+    parser = argparse.ArgumentParser(description='Modern PokerStars Bot UI - Security Enhanced')
     parser.add_argument('--recognition', type=str, default='standard', 
                       choices=['standard', 'improved', 'direct'],
                       help='Card recognition system to use')
@@ -23,6 +23,9 @@ def parse_arguments():
                       help='Show card recognition regions on the livestream')
     parser.add_argument('--config', type=str, default='region_config.json',
                       help='Path to the region configuration file')
+    parser.add_argument('--security-mode', type=str, default='safe',
+                      choices=['safe', 'minimal', 'manual'],
+                      help='Security mode: safe (8-12s intervals), minimal (15-30s), manual (no auto capture)')
     return parser.parse_args()
 
 
@@ -32,16 +35,28 @@ def main():
         # Parse command line arguments
         args = parse_arguments()
         
-        # Print startup information
-        print(f"Starting with recognition system: {args.recognition}")
+        # Print startup information with security emphasis
+        print(f"=== POKERSTARS BOT - SECURITY MODE ===")
+        print(f"Recognition system: {args.recognition}")
+        print(f"Security mode: {args.security_mode.upper()}")
         print(f"Region visualization: {'Enabled' if args.show_regions else 'Disabled'}")
-        print(f"Using configuration file: {args.config}")
+        print(f"Configuration file: {args.config}")
+        
+        if args.security_mode == 'safe':
+            print("⚠️  SAFE MODE: 8-12 second intervals with session limits")
+        elif args.security_mode == 'minimal':
+            print("⚠️  MINIMAL MODE: 15-30 second intervals - safest automated option")
+        elif args.security_mode == 'manual':
+            print("✅ MANUAL MODE: No automatic capture - manual clicks only")
+            
+        print("="*40)
         
         # Initialize and run the main window
         app = MainWindow(
             recognition_system=args.recognition,
             show_regions=args.show_regions,
-            config_path=args.config
+            config_path=args.config,
+            security_mode=args.security_mode
         )
         app.run()
     except Exception as e:

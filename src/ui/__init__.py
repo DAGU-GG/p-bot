@@ -1,5 +1,5 @@
 """
-UI Package for Modern Poker Bot
+UI Package for Modern Poker Study & Analysis Tool
 Contains all UI components split into logical modules.
 """
 

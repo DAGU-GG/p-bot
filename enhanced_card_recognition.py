@@ -1,301 +1,244 @@
 """
-This script implements enhanced card recognition with empty slot detection
-to solve the problem of misidentifying empty slots as cards.
+Enhanced Card Recognition System
+Combines OCR and pattern matching for robust card detection
 """
 
-import os
-import sys
 import cv2
 import numpy as np
 import logging
-import argparse
-from pathlib import Path
+from typing import Optional, Dict, List, Tuple
+from dataclasses import dataclass
 import time
 
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('enhanced_recognition.log'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger('enhanced_recognition')
+# Import recognition systems
+try:
+    from enhanced_ocr_recognition import EnhancedOCRCardRecognition
+    from fallback_card_recognition import FallbackCardRecognition
+    OCR_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: OCR systems not available: {e}")
+    OCR_AVAILABLE = False
 
-class EmptySlotDetector:
-    """Detects if a card slot is empty or contains an actual card."""
+@dataclass
+class CardResult:
+    """Result of card recognition"""
+    rank: str
+    suit: str
+    confidence: float
+    method: str
+    region: Tuple[int, int, int, int]  # x, y, w, h
+
+class EnhancedCardRecognition:
+    """Enhanced card recognition using multiple methods"""
     
-    def __init__(self):
-        # Create output directory
-        os.makedirs("debug_cards/empty_detection", exist_ok=True)
-    
-    def detect_empty_slot(self, card_img, debug=False, threshold=0.4):
+    def __init__(self, debug_mode: bool = True):
+        self.debug_mode = debug_mode
+        self.logger = logging.getLogger("enhanced_card_recognition")
+        
+        # Initialize recognition systems
+        self.ocr_system = None
+        self.fallback_system = None
+        
+        if OCR_AVAILABLE:
+            try:
+                self.ocr_system = EnhancedOCRCardRecognition()
+                self.logger.info("OCR recognition system initialized")
+            except Exception as e:
+                self.logger.warning(f"OCR system failed to initialize: {e}")
+            
+            try:
+                self.fallback_system = FallbackCardRecognition()
+                self.logger.info("Fallback recognition system initialized")
+            except Exception as e:
+                self.logger.warning(f"Fallback system failed to initialize: {e}")
+        
+        # Recognition settings
+        self.min_confidence = 0.1
+        self.ocr_priority = True
+        
+    def recognize_card(self, card_image: np.ndarray, region: Tuple[int, int, int, int] = None, 
+                      four_color_deck: bool = True) -> Optional[CardResult]:
         """
-        Analyze a card image to determine if it's empty or contains an actual card.
+        Recognize a card using available recognition methods
         
         Args:
-            card_img: The card image (numpy array)
-            debug: Whether to save debug images
-            threshold: The threshold for edge percentage to consider a slot not empty
-            
+            card_image: Card image to recognize
+            region: (x, y, w, h) region coordinates
+            four_color_deck: Whether to use 4-color deck recognition
+        
         Returns:
-            is_empty: Boolean indicating if the slot is empty
-            confidence: Confidence score (0-1) of the detection
-            debug_img: Debug visualization image if debug=True, otherwise None
+            CardResult if successful, None otherwise
         """
-        if card_img is None or card_img.size == 0:
-            return True, 1.0, None
+        if card_image is None or card_image.size == 0:
+            return None
         
-        # Get image dimensions
-        height, width = card_img.shape[:2]
+        results = []
         
-        # Convert to grayscale
-        gray = cv2.cvtColor(card_img, cv2.COLOR_BGR2GRAY)
+        # Try OCR recognition first if available and preferred
+        if self.ocr_system and self.ocr_priority:
+            ocr_result = self._try_ocr_recognition(card_image, region)
+            if ocr_result:
+                results.append(ocr_result)
         
-        # Apply edge detection
-        edges = cv2.Canny(gray, 50, 150)
+        # Try fallback recognition
+        if self.fallback_system:
+            fallback_result = self._try_fallback_recognition(card_image, region, four_color_deck)
+            if fallback_result:
+                results.append(fallback_result)
         
-        # Count edge pixels
-        edge_count = np.count_nonzero(edges)
-        edge_percentage = (edge_count / (width * height)) 
+        # Try OCR as fallback if not tried first
+        if self.ocr_system and not self.ocr_priority and not results:
+            ocr_result = self._try_ocr_recognition(card_image, region)
+            if ocr_result:
+                results.append(ocr_result)
         
-        # Measure standard deviation of pixel values (measure of contrast)
-        std_dev = np.std(gray) / 255.0  # Normalize to 0-1
+        # Return best result
+        if results:
+            best_result = max(results, key=lambda r: r.confidence)
+            if best_result.confidence >= self.min_confidence:
+                return best_result
         
-        # Check color variation - convert to HSV and measure standard deviation
-        hsv = cv2.cvtColor(card_img, cv2.COLOR_BGR2HSV)
-        h_std = np.std(hsv[:,:,0]) / 180.0  # Normalize to 0-1
-        s_std = np.std(hsv[:,:,1]) / 255.0  # Normalize to 0-1
-        
-        # Calculate feature values
-        features = {
-            'edge_percentage': edge_percentage,
-            'std_dev': std_dev,
-            'h_std': h_std,
-            's_std': s_std
-        }
-        
-        # Calculate detection score 
-        # Cards have more edges, higher contrast, more color variation
-        card_score = (edge_percentage * 2.5 + std_dev + h_std * 0.5 + s_std * 0.5) / 5.0
-        
-        # Decision
-        is_empty = card_score < threshold
-        confidence = 1.0 - card_score if is_empty else card_score
-        
-        # Create debug visualization if requested
-        debug_img = None
-        if debug:
-            # Create visualization with fixed size text area
-            text_width = max(width, 150)  # Ensure text area has minimum width
-            
-            # Handle very small images
-            min_height = 100
-            if height < min_height:
-                scale = min_height / height
-                vis_height = min_height
-                card_vis = cv2.resize(card_img, (int(width * scale), vis_height), interpolation=cv2.INTER_NEAREST)
-                edges_vis = cv2.resize(edges, (int(width * scale), vis_height), interpolation=cv2.INTER_NEAREST)
-                width_scaled = int(width * scale)
-            else:
-                vis_height = height
-                card_vis = card_img.copy()
-                edges_vis = edges.copy()
-                width_scaled = width
-            
-            # Ensure proper dimensions for visualization
-            vis_width = width_scaled * 2 + text_width
-            visualization = np.zeros((vis_height, vis_width, 3), dtype=np.uint8)
-            
-            # Original image (ensure proper size)
-            if width_scaled > 0 and vis_height > 0:
-                card_area = visualization[:vis_height, :width_scaled]
-                try:
-                    if len(card_vis.shape) == 3:
-                        # Resize card_vis to match the destination area
-                        if card_vis.shape[:2] != card_area.shape[:2]:
-                            card_vis_resized = cv2.resize(card_vis, (card_area.shape[1], card_area.shape[0]))
-                        else:
-                            card_vis_resized = card_vis
-                        card_area[:] = card_vis_resized
-                    else:
-                        card_vis_color = cv2.cvtColor(card_vis, cv2.COLOR_GRAY2BGR)
-                        if card_vis_color.shape[:2] != card_area.shape[:2]:
-                            card_vis_resized = cv2.resize(card_vis_color, (card_area.shape[1], card_area.shape[0]))
-                        else:
-                            card_vis_resized = card_vis_color
-                        card_area[:] = card_vis_resized
-                except Exception as e:
-                    logger.error(f"Error rendering original image: {e}")
-                    # Fill with gray if error
-                    card_area[:] = (128, 128, 128)
-            
-            # Edge image (convert to color and ensure proper size)
-            if width_scaled > 0 and vis_height > 0:
-                edge_area = visualization[:vis_height, width_scaled:width_scaled*2]
-                try:
-                    edge_vis_color = cv2.cvtColor(edges_vis, cv2.COLOR_GRAY2BGR)
-                    if edge_vis_color.shape[:2] != edge_area.shape[:2]:
-                        edge_vis_resized = cv2.resize(edge_vis_color, (edge_area.shape[1], edge_area.shape[0]))
-                    else:
-                        edge_vis_resized = edge_vis_color
-                    edge_area[:] = edge_vis_resized
-                except Exception as e:
-                    logger.error(f"Error rendering edge image: {e}")
-                    # Fill with gray if error
-                    edge_area[:] = (128, 128, 128)
-            
-            # Add text area
-            text_area = np.ones((vis_height, text_width, 3), dtype=np.uint8) * 255
-            
-            # Add feature text
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            y_pos = 20
-            cv2.putText(text_area, f"Edges: {edge_percentage*100:.1f}%", (10, y_pos), font, 0.5, (0, 0, 0), 1)
-            y_pos += 15
-            cv2.putText(text_area, f"Contrast: {std_dev:.3f}", (10, y_pos), font, 0.5, (0, 0, 0), 1)
-            y_pos += 15
-            cv2.putText(text_area, f"Hue var: {h_std:.3f}", (10, y_pos), font, 0.5, (0, 0, 0), 1)
-            y_pos += 15
-            cv2.putText(text_area, f"Sat var: {s_std:.3f}", (10, y_pos), font, 0.5, (0, 0, 0), 1)
-            y_pos += 15
-            cv2.putText(text_area, f"Card score: {card_score:.3f}", (10, y_pos), font, 0.5, (0, 0, 0), 1)
-            
-            # Add result
-            y_pos += 25
-            result_text = "EMPTY SLOT" if is_empty else "CARD DETECTED"
-            result_color = (0, 0, 200) if is_empty else (0, 200, 0)
-            cv2.putText(text_area, result_text, (10, y_pos), font, 0.7, result_color, 2)
-            
-            # Add confidence
-            y_pos += 20
-            cv2.putText(text_area, f"Confidence: {confidence:.2f}", (10, y_pos), font, 0.5, result_color, 1)
-            
-            # Add to visualization
-            visualization[:vis_height, width_scaled*2:] = text_area[:vis_height, :text_width]
-            
-            # Add section labels
-            cv2.putText(visualization, "Original", (10, 10), font, 0.4, (255, 255, 255), 1)
-            cv2.putText(visualization, "Edges", (width_scaled + 10, 10), font, 0.4, (255, 255, 255), 1)
-            
-            debug_img = visualization
-        
-        return is_empty, confidence, debug_img
-
-class EnhancedCardRecognizer:
-    """Enhanced card recognizer with empty slot detection to prevent false positives."""
+        return None
     
-    def __init__(self):
-        # Create output directories
-        os.makedirs("debug_cards", exist_ok=True)
-        os.makedirs("debug_cards/enhanced", exist_ok=True)
-        
-        # Initialize empty slot detector
-        self.empty_detector = EmptySlotDetector()
-        
-        # Load the original card recognizer
+    def _try_ocr_recognition(self, card_image: np.ndarray, region: Tuple[int, int, int, int]) -> Optional[CardResult]:
+        """Try OCR recognition on card image"""
         try:
-            from src.card_recognizer import CardRecognizer
-            self.card_recognizer = CardRecognizer()
-        except ImportError as e:
-            logger.error(f"Failed to import card recognizer: {e}")
-            logger.error("Make sure the src directory is in the Python path")
-            sys.exit(1)
-    
-    def recognize_card(self, card_img, debug=False):
-        """
-        Enhanced card recognition with empty slot detection.
-        
-        Args:
-            card_img: The card image to recognize
-            debug: Whether to save debug images
-            
-        Returns:
-            result: Dictionary with recognition results
-        """
-        try:
-            timestamp = int(time.time() * 1000)
-            
-            # Check if this is an empty slot
-            is_empty, empty_confidence, empty_debug_img = self.empty_detector.detect_empty_slot(card_img, debug)
-            
-            if debug and empty_debug_img is not None:
-                debug_path = f"debug_cards/enhanced/empty_check_{timestamp}.png"
-                cv2.imwrite(debug_path, empty_debug_img)
-            
-            # If it's an empty slot with high confidence, don't try to recognize
-            if is_empty and empty_confidence > 0.7:
-                logger.info(f"Detected empty slot with confidence {empty_confidence:.2f}")
-                result = {
-                    'card_code': 'empty',
-                    'confidence': empty_confidence,
-                    'method': 'empty_slot_detection',
-                    'is_empty': True
-                }
-                return result
-            
-            # Proceed with normal card recognition if not empty or uncertain
-            logger.info(f"Proceeding with card recognition (empty confidence: {empty_confidence:.2f})")
-            
-            # Call the original recognizer
-            card_code, confidence, method = self.card_recognizer.recognize_card(card_img, debug)
-            
-            # Create the result
-            result = {
-                'card_code': card_code,
-                'confidence': confidence,
-                'method': method,
-                'is_empty': False,
-                'empty_confidence': empty_confidence
-            }
-            
-            # If the recognized card has very low confidence and the empty slot detection
-            # was moderately confident, trust the empty slot detection instead
-            if confidence < 0.5 and empty_confidence > 0.6:
-                logger.info(f"Overriding low confidence card ({card_code}, {confidence:.2f}) with empty slot detection")
-                result['card_code'] = 'empty'
-                result['confidence'] = empty_confidence
-                result['method'] = 'empty_slot_detection'
-                result['is_empty'] = True
-            
-            return result
-            
+            result = self.ocr_system.recognize_card(card_image, debug=self.debug_mode)
+            if result and result.confidence > 0:
+                return CardResult(
+                    rank=result.rank,
+                    suit=result.suit,
+                    confidence=result.confidence,
+                    method="OCR",
+                    region=region or (0, 0, card_image.shape[1], card_image.shape[0])
+                )
         except Exception as e:
-            logger.error(f"Error in enhanced card recognition: {e}", exc_info=True)
-            return {
-                'card_code': 'error',
-                'confidence': 0.0,
-                'method': 'error',
-                'is_empty': False,
-                'error': str(e)
-            }
+            self.logger.warning(f"OCR recognition failed: {e}")
+        
+        return None
+    
+    def _try_fallback_recognition(self, card_image: np.ndarray, region: Tuple[int, int, int, int], 
+                                 four_color_deck: bool) -> Optional[CardResult]:
+        """Try fallback pattern matching recognition"""
+        try:
+            result = self.fallback_system.recognize_card(card_image, four_color_deck=four_color_deck)
+            if result and result.confidence > 0:
+                return CardResult(
+                    rank=result.rank,
+                    suit=result.suit,
+                    confidence=result.confidence,
+                    method="Pattern",
+                    region=region or (0, 0, card_image.shape[1], card_image.shape[0])
+                )
+        except Exception as e:
+            self.logger.warning(f"Fallback recognition failed: {e}")
+        
+        return None
+    
+    def recognize_multiple_cards(self, image: np.ndarray, regions: List[Tuple[int, int, int, int]], 
+                               four_color_deck: bool = True) -> List[CardResult]:
+        """
+        Recognize multiple cards from regions in an image
+        
+        Args:
+            image: Full screenshot image
+            regions: List of (x, y, w, h) regions containing cards
+            four_color_deck: Whether to use 4-color deck recognition
+        
+        Returns:
+            List of CardResult objects
+        """
+        results = []
+        
+        for i, region in enumerate(regions):
+            x, y, w, h = region
+            
+            # Extract card region
+            if (x + w <= image.shape[1] and y + h <= image.shape[0] and x >= 0 and y >= 0):
+                card_image = image[y:y+h, x:x+w]
+                
+                # Save debug image if enabled
+                if self.debug_mode:
+                    debug_filename = f"debug_card_region_{i}_{int(time.time())}.png"
+                    cv2.imwrite(debug_filename, card_image)
+                
+                # Recognize card
+                result = self.recognize_card(card_image, region, four_color_deck)
+                if result:
+                    results.append(result)
+                    self.logger.info(f"Card {i}: {result.rank}{result.suit} ({result.method}, {result.confidence:.2f})")
+        
+        return results
+    
+    def preprocess_card_image(self, card_image: np.ndarray) -> np.ndarray:
+        """Preprocess card image for better recognition"""
+        if card_image is None or card_image.size == 0:
+            return card_image
+        
+        # Convert to RGB if needed
+        if len(card_image.shape) == 3:
+            processed = cv2.cvtColor(card_image, cv2.COLOR_BGR2RGB)
+        else:
+            processed = card_image.copy()
+        
+        # Enhance contrast
+        processed = cv2.convertScaleAbs(processed, alpha=1.2, beta=10)
+        
+        # Denoise
+        if len(processed.shape) == 3:
+            processed = cv2.fastNlMeansDenoisingColored(processed, None, 10, 10, 7, 21)
+        else:
+            processed = cv2.fastNlMeansDenoising(processed, None, 10, 7, 21)
+        
+        return processed
+    
+    def get_recognition_stats(self) -> Dict:
+        """Get statistics about recognition performance"""
+        return {
+            'ocr_available': self.ocr_system is not None,
+            'fallback_available': self.fallback_system is not None,
+            'min_confidence': self.min_confidence,
+            'ocr_priority': self.ocr_priority,
+            'debug_mode': self.debug_mode
+        }
+
+def test_enhanced_recognition():
+    """Test enhanced recognition system"""
+    print("Testing Enhanced Card Recognition System...")
+    
+    # Initialize system
+    recognizer = EnhancedCardRecognition(debug_mode=True)
+    
+    # Print stats
+    stats = recognizer.get_recognition_stats()
+    print(f"Recognition Stats: {stats}")
+    
+    # Try to load test image
+    test_images = ['test_card.png', 'calibration_screenshot.png', 'poker_screenshot.png']
+    
+    for test_image in test_images:
+        try:
+            image = cv2.imread(test_image)
+            if image is not None:
+                print(f"Loaded test image: {test_image}")
+                
+                # Test on whole image (will likely fail but tests the system)
+                result = recognizer.recognize_card(image)
+                if result:
+                    print(f"Recognition result: {result.rank}{result.suit} ({result.method}, {result.confidence:.2f})")
+                else:
+                    print("No card recognized in full image")
+                
+                break
+        except Exception as e:
+            print(f"Error testing with {test_image}: {e}")
+    
+    print("Enhanced recognition test complete")
 
 def main():
-    """Main function for command line usage."""
-    parser = argparse.ArgumentParser(description='Enhanced card recognition with empty slot detection')
-    parser.add_argument('--image', help='Path to card image to analyze')
-    args = parser.parse_args()
-    
-    if not args.image:
-        parser.print_help()
-        return
-    
-    recognizer = EnhancedCardRecognizer()
-    
-    # Load the image
-    image = cv2.imread(args.image)
-    if image is None:
-        logger.error(f"Failed to load image: {args.image}")
-        return
-    
-    # Run recognition
-    result = recognizer.recognize_card(image, debug=True)
-    
-    # Print results
-    logger.info(f"Recognition results for {args.image}:")
-    for key, value in result.items():
-        logger.info(f"  {key}: {value}")
+    """Main function for testing"""
+    logging.basicConfig(level=logging.INFO)
+    test_enhanced_recognition()
 
 if __name__ == "__main__":
     main()

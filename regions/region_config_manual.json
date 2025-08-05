@@ -1,0 +1,53 @@
+{
+  "regions": {
+    "community_card_1": {
+      "x_percent": 0.40625,
+      "y_percent": 0.3277777777777778,
+      "width_percent": 0.03125,
+      "height_percent": 0.07777777777777778
+    },
+    "community_card_2": {
+      "x_percent": 0.4432291666666666,
+      "y_percent": 0.33240740740740743,
+      "width_percent": 0.03125,
+      "height_percent": 0.07777777777777778
+    },
+    "community_card_3": {
+      "x_percent": 0.484375,
+      "y_percent": 0.3296296296296296,
+      "width_percent": 0.03125,
+      "height_percent": 0.07777777777777778
+    },
+    "community_card_4": {
+      "x_percent": 0.5223958333333333,
+      "y_percent": 0.33148148148148154,
+      "width_percent": 0.03125,
+      "height_percent": 0.07777777777777778
+    },
+    "community_card_5": {
+      "x_percent": 0.5604166666666667,
+      "y_percent": 0.33148148148148154,
+      "width_percent": 0.03125,
+      "height_percent": 0.07777777777777778
+    },
+    "hero_card_1": {
+      "x_percent": 0.46354166666666674,
+      "y_percent": 0.6064814814814815,
+      "width_percent": 0.03125,
+      "height_percent": 0.07777777777777778
+    },
+    "hero_card_2": {
+      "x_percent": 0.5020833333333333,
+      "y_percent": 0.6064814814814815,
+      "width_percent": 0.03125,
+      "height_percent": 0.07777777777777778
+    }
+  },
+  "created_timestamp": "2025-08-05T02:34:27.265058",
+  "source_image": "poker_table_for_regions_20250805_023128.png",
+  "image_dimensions": {
+    "width": 1920,
+    "height": 1080
+  },
+  "method": "manual_click"
+}

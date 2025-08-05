@@ -27,7 +27,7 @@ class HeaderPanel(tk.Frame):
         
         title_label = tk.Label(
             title_frame, 
-            text="🎰 PokerStars Bot Professional", 
+            text="📊 Poker Study & Analysis Tool", 
             font=("Arial", 14, "bold"),  # Even smaller to maximize table space
             bg='#2b2b2b', fg='white'
         )
@@ -35,7 +35,7 @@ class HeaderPanel(tk.Frame):
         
         subtitle_label = tk.Label(
             title_frame, 
-            text="Advanced AI Poker Analysis & Automation", 
+            text="Educational Post-Game Hand Analysis", 
             font=("Arial", 8),  # Tiny subtitle to save space
             bg='#2b2b2b', fg='lightgray'
         )
@@ -56,7 +56,7 @@ class HeaderPanel(tk.Frame):
         
         self.bot_status = tk.Label(
             status_frame, 
-            text="Bot: Stopped", 
+            text="Analysis: Stopped", 
             font=("Arial", 10),
             fg="orange", bg='#2b2b2b'
         )
@@ -67,5 +67,5 @@ class HeaderPanel(tk.Frame):
         self.connection_status.configure(text=f"● {status}", fg=color)
     
     def set_bot_status(self, status, color):
-        """Update bot status."""
-        self.bot_status.configure(text=f"Bot: {status}", fg=color)
+        """Update analysis status."""
+        self.bot_status.configure(text=f"Analysis: {status}", fg=color)

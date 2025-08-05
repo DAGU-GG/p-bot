@@ -20,6 +20,18 @@ except ImportError:
     KEYBOARD_AVAILABLE = False
     print("Warning: keyboard module not available, hotkey functionality disabled")
 
+# OCR-based card recognition system  
+try:
+    import sys
+    import os
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+    from ocr_card_recognition import ocr_recognizer
+    OCR_RECOGNITION_AVAILABLE = True
+    print("✅ OCR recognition system loaded")
+except ImportError:
+    OCR_RECOGNITION_AVAILABLE = False
+    print("❌ OCR recognition not available - using old system")
+
 # Import our custom modules
 from image_processor import ImageProcessor, GameState
 from card_recognizer import CardRecognizer, HoleCards
@@ -91,12 +103,20 @@ class PokerStarsBot:
             self.card_recognizer = CardRecognizer()
         
         # Initialize remaining components
-        self.community_detector = CommunityCardDetector(self.card_recognizer)
+        # For community card detection, always use the original CardRecognizer
+        # as it has the required template matching methods
+        if hasattr(self.card_recognizer, 'original_recognizer') and self.card_recognizer.original_recognizer:
+            community_recognizer = self.card_recognizer.original_recognizer
+        else:
+            community_recognizer = CardRecognizer()
+        
+        self.community_detector = CommunityCardDetector(community_recognizer)
         self.window_capture = PokerStarsWindowCapture()
         self.table_analyzer = PokerTableAnalyzer()
         
         # Bot settings
-        self.capture_interval = 0.5  # Capture every 500ms
+        # FIXED: Set exactly 10 FPS (0.1 second intervals) for consistent performance
+        self.capture_interval = 0.1  # 10 FPS exactly
         self.running = False
         
         # Statistics
@@ -218,12 +238,18 @@ class PokerStarsBot:
             game_state = self.image_processor.analyze_table_state(table_image)
             self.logger.info(f"Image processor analysis complete: {game_state.active_players} players detected")
             
-            # Recognize hero's hole cards
-            hole_cards = self.card_recognizer.recognize_hero_hole_cards(table_image, debug=debug)
-            self.logger.info(f"Hole cards analysis complete: valid={hole_cards.is_valid()}")
+            # Use OCR recognition system
+            if OCR_RECOGNITION_AVAILABLE:
+                self.logger.info("Using OCR recognition system")
+                hole_cards = ocr_recognizer.recognize_hero_hole_cards(table_image, debug=debug)
+                community_cards = ocr_recognizer.detect_community_cards(table_image, debug=debug)
+            else:
+                self.logger.info("Using old recognition system")
+                # Fallback to old system
+                hole_cards = self.card_recognizer.recognize_hero_hole_cards(table_image, debug=debug)
+                community_cards = self.community_detector.detect_community_cards(table_image, debug=debug)
             
-            # Detect community cards
-            community_cards = self.community_detector.detect_community_cards(table_image, debug=debug)
+            self.logger.info(f"Hole cards analysis complete: valid={hole_cards.is_valid()}")
             self.logger.info(f"Community cards analysis complete: {community_cards.count} cards detected")
             
             # Analyze complete table information

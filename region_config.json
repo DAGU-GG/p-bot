@@ -1,0 +1,51 @@
+{
+  "hero_card_1": {
+    "x_percent": 0.42,
+    "y_percent": 0.75,
+    "width_percent": 0.06,
+    "height_percent": 0.12,
+    "type": "hero_card"
+  },
+  "hero_card_2": {
+    "x_percent": 0.52,
+    "y_percent": 0.75,
+    "width_percent": 0.06,
+    "height_percent": 0.12,
+    "type": "hero_card"
+  },
+  "community_card_1": {
+    "x_percent": 0.35,
+    "y_percent": 0.42,
+    "width_percent": 0.06,
+    "height_percent": 0.12,
+    "type": "community_card"
+  },
+  "community_card_2": {
+    "x_percent": 0.42,
+    "y_percent": 0.42,
+    "width_percent": 0.06,
+    "height_percent": 0.12,
+    "type": "community_card"
+  },
+  "community_card_3": {
+    "x_percent": 0.49,
+    "y_percent": 0.42,
+    "width_percent": 0.06,
+    "height_percent": 0.12,
+    "type": "community_card"
+  },
+  "community_card_4": {
+    "x_percent": 0.56,
+    "y_percent": 0.42,
+    "width_percent": 0.06,
+    "height_percent": 0.12,
+    "type": "community_card"
+  },
+  "community_card_5": {
+    "x_percent": 0.63,
+    "y_percent": 0.42,
+    "width_percent": 0.06,
+    "height_percent": 0.12,
+    "type": "community_card"
+  }
+}
