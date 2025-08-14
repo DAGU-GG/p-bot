@@ -1,0 +1,82 @@
+{
+  "timestamp": 1754499723.507662,
+  "adjustments": [
+    {
+      "x_offset": 6,
+      "y_offset": 10,
+      "width_adjust": -6,
+      "height_adjust": 0
+    },
+    {
+      "x_offset": 6,
+      "y_offset": 10,
+      "width_adjust": -6,
+      "height_adjust": 0
+    },
+    {
+      "x_offset": 6,
+      "y_offset": 10,
+      "width_adjust": -6,
+      "height_adjust": 0
+    },
+    {
+      "x_offset": 6,
+      "y_offset": 10,
+      "width_adjust": -6,
+      "height_adjust": 0
+    },
+    {
+      "x_offset": 6,
+      "y_offset": 10,
+      "width_adjust": -6,
+      "height_adjust": 0
+    }
+  ],
+  "regions": {
+    "community_card_1": {
+      "region": [
+        775,
+        353,
+        844,
+        418
+      ],
+      "color": "#ffff44"
+    },
+    "community_card_2": {
+      "region": [
+        850,
+        353,
+        919,
+        418
+      ],
+      "color": "#ffff44"
+    },
+    "community_card_3": {
+      "region": [
+        925,
+        353,
+        994,
+        418
+      ],
+      "color": "#ffff44"
+    },
+    "community_card_4": {
+      "region": [
+        1000,
+        353,
+        1069,
+        418
+      ],
+      "color": "#ffff44"
+    },
+    "community_card_5": {
+      "region": [
+        1075,
+        353,
+        1144,
+        418
+      ],
+      "color": "#ffff44"
+    }
+  }
+}

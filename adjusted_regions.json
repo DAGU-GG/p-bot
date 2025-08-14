@@ -1,0 +1,108 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "adjusted_from": "calibrated_regions.json",
+    "original_resolution": "1920x1080",
+    "screenshot_resolution": "1282x920",
+    "width_scale": 0.6677083333333333,
+    "height_scale": 0.8518518518518519
+  },
+  "regions": {
+    "hero_card_1": {
+      "x": 561,
+      "y": 581,
+      "width": 45,
+      "height": 57
+    },
+    "hero_card_2": {
+      "x": 648,
+      "y": 582,
+      "width": 46,
+      "height": 57
+    },
+    "community_card_1": {
+      "x": 431,
+      "y": 321,
+      "width": 44,
+      "height": 67
+    },
+    "community_card_2": {
+      "x": 516,
+      "y": 318,
+      "width": 42,
+      "height": 65
+    },
+    "community_card_3": {
+      "x": 600,
+      "y": 319,
+      "width": 41,
+      "height": 63
+    },
+    "community_card_4": {
+      "x": 690,
+      "y": 320,
+      "width": 42,
+      "height": 63
+    },
+    "community_card_5": {
+      "x": 778,
+      "y": 321,
+      "width": 42,
+      "height": 63
+    },
+    "pot": {
+      "x": 555,
+      "y": 288,
+      "width": 174,
+      "height": 29
+    },
+    "table_bounds": {
+      "x": 329,
+      "y": 185,
+      "width": 608,
+      "height": 458
+    },
+    "action_buttons": {
+      "x": 726,
+      "y": 717,
+      "width": 489,
+      "height": 186
+    },
+    "player_1_stack": {
+      "x": 831,
+      "y": 572,
+      "width": 90,
+      "height": 35
+    },
+    "player_2_stack": {
+      "x": 904,
+      "y": 394,
+      "width": 88,
+      "height": 34
+    },
+    "player_3_stack": {
+      "x": 357,
+      "y": 575,
+      "width": 96,
+      "height": 34
+    },
+    "player_4_stack": {
+      "x": 285,
+      "y": 396,
+      "width": 96,
+      "height": 31
+    },
+    "player_5_stack": {
+      "x": 323,
+      "y": 218,
+      "width": 86,
+      "height": 40
+    },
+    "dealer_button": {
+      "x": 452,
+      "y": 139,
+      "width": 95,
+      "height": 28
+    }
+  }
+}
